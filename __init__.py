@@ -9,7 +9,7 @@ import requests
 from albert import *
 
 md_iid = "3.0"
-md_version = "0.1.0"
+md_version = "0.1.1"
 md_name = "Readeck"
 md_description = "Manage saved bookmarks via a readeck instance"
 md_license = "MIT"
@@ -120,18 +120,17 @@ class Plugin(PluginInstance, IndexQueryHandler):
             item = self._gen_item(link)
             self._index_items.append(IndexItem(item=item, string=filter))
         self.updateIndexItems()
-        info("Indexed {} bookmarks [{:d} ms]".format(len(self._index_items), (int(perf_counter_ns() - start) // 1000000)))
+        info(
+            "Indexed {} bookmarks [{:d} ms]".format(len(self._index_items), (int(perf_counter_ns() - start) // 1000000))
+        )
         self._index_items = []
-
 
     def handleTriggerQuery(self, query):
         stripped = query.string.strip()
         if stripped:
             TriggerQueryHandler.handleTriggerQuery(self, query)
         else:
-            query.add(
-                StandardItem( text=md_name, subtext="Search for a page saved in Readeck", iconUrls=self.iconUrls)
-            )
+            query.add(StandardItem(text=md_name, subtext="Search for a page saved in Readeck", iconUrls=self.iconUrls))
         query.add(
             StandardItem(
                 text="Refresh cache index",
@@ -140,7 +139,6 @@ class Plugin(PluginInstance, IndexQueryHandler):
                 actions=[Action("refresh", "Refresh readeck index", lambda: self.fetchIndexItems())],
             )
         )
-
 
     def _create_filters(self, item: dict):
         return ",".join([item["url"], item["title"], ",".join(label for label in item["labels"])])
@@ -185,18 +183,26 @@ class Plugin(PluginInstance, IndexQueryHandler):
         """
         offset = 0
         total = 1
-        headers = {"User-Agent": self.user_agent, "Authorization": f"Bearer {self._api_key}", "accept": "application/json"}
+        headers = {
+            "User-Agent": self.user_agent,
+            "Authorization": f"Bearer {self._api_key}",
+            "accept": "application/json",
+        }
         params = {"limit": self.limit}
         response_headers = None
         while offset <= total:
             params["offset"] = offset
             url = f"{self._instance_url}/api/bookmarks?{parse.urlencode(params)}"
-            response = requests.get(url, headers=headers, timeout=5)
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+            except requests.ConnectionError as e:
+                warning(f"Unable to connect to {self._instance_url}: {e}")
+                break
             if response.ok:
                 if not response_headers:
                     response_headers = response.headers
                     total = int(response_headers.get("Total-Count", 1))
-                result = response.json() # Should just be a list of links
+                result = response.json()  # Should just be a list of links
                 offset += self.limit
                 yield result
             else:
