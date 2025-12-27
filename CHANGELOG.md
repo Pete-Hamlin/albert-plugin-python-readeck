@@ -1,4 +1,10 @@
 
+<a name="0.3.0"></a>
+## [0.3.0] - 2025-12-27
+### Features
+- Add synopsis
+
+
 <a name="0.2.0"></a>
 ## [0.2.0] - 2025-12-27
 ### Bug Fixes
@@ -24,6 +30,7 @@ Compatible with albert v0.33.*
 - Initial commit
 
 
-[Unreleased]: https://github.com/Pete-Hamlin/albert-readeck/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/Pete-Hamlin/albert-readeck/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/Pete-Hamlin/albert-readeck/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/Pete-Hamlin/albert-readeck/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/Pete-Hamlin/albert-readeck/compare/0.1.0...0.1.1
