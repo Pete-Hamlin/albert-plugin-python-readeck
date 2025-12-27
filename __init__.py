@@ -9,7 +9,7 @@ import requests
 from albert import *
 
 md_iid = "4.0"
-md_version = "0.2.0"
+md_version = "0.3.0"
 md_name = "Readeck"
 md_description = "Manage saved bookmarks via a readeck instance"
 md_license = "MIT"
@@ -62,6 +62,9 @@ class Plugin(PluginInstance, IndexQueryHandler):
 
     def defaultTrigger(self):
         return "rd "
+
+    def synopsis(self, _) -> str:
+        return "<article title|url|label>"
 
     @property
     def instance_url(self):
