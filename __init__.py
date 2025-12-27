@@ -8,13 +8,14 @@ from urllib import parse
 import requests
 from albert import *
 
-md_iid = "3.0"
-md_version = "0.1.1"
+md_iid = "4.0"
+md_version = "0.2.0"
 md_name = "Readeck"
 md_description = "Manage saved bookmarks via a readeck instance"
 md_license = "MIT"
 md_url = "https://github.com/Pete-Hamlin/albert-readeck"
 md_authors = ["@Pete-Hamlin"]
+md_maintainers = ["@Pete-Hamlin"]
 md_lib_dependencies = ["requests"]
 
 
@@ -38,7 +39,7 @@ class LinkFetcherThread(Thread):
 
 
 class Plugin(PluginInstance, IndexQueryHandler):
-    iconUrls = [f"file:{Path(__file__).parent}/readeck.svg"]
+    logo_icon = Path(__file__).parent / "readeck.svg"
     limit = 100
     user_agent = "org.albert.readeck"
 
@@ -130,12 +131,18 @@ class Plugin(PluginInstance, IndexQueryHandler):
         if stripped:
             TriggerQueryHandler.handleTriggerQuery(self, query)
         else:
-            query.add(StandardItem(text=md_name, subtext="Search for a page saved in Readeck", iconUrls=self.iconUrls))
+            query.add(
+                StandardItem(
+                    text=md_name,
+                    subtext="Search for a page saved in Readeck",
+                    icon_factory=lambda: makeImageIcon(self.logo_icon),
+                )
+            )
         query.add(
             StandardItem(
                 text="Refresh cache index",
                 subtext="Refresh indexed bookmarks",
-                iconUrls=["xdg:view-refresh"],
+                icon_factory=lambda: makeThemeIcon("view-refresh"),
                 actions=[Action("refresh", "Refresh readeck index", lambda: self.fetchIndexItems())],
             )
         )
@@ -152,7 +159,7 @@ class Plugin(PluginInstance, IndexQueryHandler):
             id=str(self.id),
             text=title,
             subtext="{}: {}".format(",".join(label for label in bookmark["labels"]), bookmark["url"]),
-            iconUrls=self.iconUrls,
+            icon_factory=lambda: makeImageIcon(self.logo_icon),
             actions=[
                 Action("open", "Open in Readeck", lambda u=bookmark["href"].replace("/api", "", 1): openUrl(u)),
                 Action("open", "Open bookmark URL", lambda u=bookmark["url"]: openUrl(u)),
@@ -196,7 +203,8 @@ class Plugin(PluginInstance, IndexQueryHandler):
             try:
                 response = requests.get(url, headers=headers, timeout=5)
             except requests.ConnectionError as e:
-                warning(f"Unable to connect to {self._instance_url}: {e}")
+                warning(f"Unable to connect to {self._instance_url}")
+                debug(f"Error: {e}")
                 break
             if response.ok:
                 if not response_headers:
