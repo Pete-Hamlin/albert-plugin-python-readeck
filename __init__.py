@@ -40,7 +40,7 @@ class LinkFetcherThread(Thread):
 class Plugin(PluginInstance, IndexQueryHandler):
     iconUrls = [f"file:{Path(__file__).parent}/readeck.svg"]
     limit = 100
-    user_agent = "org.albert.linkding"
+    user_agent = "org.albert.readeck"
 
     def __init__(self):
         PluginInstance.__init__(self)
