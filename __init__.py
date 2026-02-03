@@ -8,8 +8,8 @@ from urllib import parse
 import requests
 from albert import *
 
-md_iid = "4.0"
-md_version = "0.3.0"
+md_iid = "5.0"
+md_version = "0.4.0"
 md_name = "Readeck"
 md_description = "Manage saved bookmarks via a readeck instance"
 md_license = "MIT"
@@ -39,7 +39,6 @@ class LinkFetcherThread(Thread):
 
 
 class Plugin(PluginInstance, IndexQueryHandler):
-    logo_icon = Path(__file__).parent / "readeck.svg"
     limit = 100
     user_agent = "org.albert.readeck"
 
@@ -55,6 +54,10 @@ class Plugin(PluginInstance, IndexQueryHandler):
 
         self._thread = LinkFetcherThread(callback=self.fetchIndexItems, cache_length=self._cache_length)
         self._thread.start()
+
+    @staticmethod
+    def makeIcon():
+        return Icon.composed(Icon.image(Path(__file__).parent / "readeck.svg"), Icon.grapheme("🔗"))
 
     def __del__(self):
         self._thread.stop()
@@ -138,14 +141,14 @@ class Plugin(PluginInstance, IndexQueryHandler):
                 StandardItem(
                     text=md_name,
                     subtext="Search for a page saved in Readeck",
-                    icon_factory=lambda: makeImageIcon(self.logo_icon),
+                    icon_factory=Plugin.makeIcon,
                 )
             )
         query.add(
             StandardItem(
                 text="Refresh cache index",
                 subtext="Refresh indexed bookmarks",
-                icon_factory=lambda: makeThemeIcon("view-refresh"),
+                icon_factory=Plugin.makeIcon,
                 actions=[Action("refresh", "Refresh readeck index", lambda: self.fetchIndexItems())],
             )
         )
@@ -162,7 +165,7 @@ class Plugin(PluginInstance, IndexQueryHandler):
             id=str(self.id),
             text=title,
             subtext="{}: {}".format(",".join(label for label in bookmark["labels"]), bookmark["url"]),
-            icon_factory=lambda: makeImageIcon(self.logo_icon),
+            icon_factory=Plugin.makeIcon,
             actions=[
                 Action("open", "Open in Readeck", lambda u=bookmark["href"].replace("/api", "", 1): openUrl(u)),
                 Action("open", "Open bookmark URL", lambda u=bookmark["url"]: openUrl(u)),
