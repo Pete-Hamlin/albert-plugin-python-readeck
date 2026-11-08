@@ -9,7 +9,7 @@ import requests
 from albert import *
 
 md_iid = "5.0"
-md_version = "0.4.0"
+md_version = "0.4.1"
 md_name = "Readeck"
 md_description = "Manage saved bookmarks via a readeck instance"
 md_license = "MIT"
@@ -48,16 +48,25 @@ class Plugin(PluginInstance, IndexQueryHandler):
 
         self._index_items = []
 
-        self._instance_url = self.readConfig("instance_url", str) or "http://localhost:8000"
+        self._instance_url = (
+            self.readConfig("instance_url", str) or "http://localhost:8000"
+        )
         self._api_key = self.readConfig("api_key", str) or ""
         self._cache_length = self.readConfig("cache_length", int) or 15
 
-        self._thread = LinkFetcherThread(callback=self.fetchIndexItems, cache_length=self._cache_length)
+        self._thread = LinkFetcherThread(
+            callback=self.fetchIndexItems, cache_length=self._cache_length
+        )
         self._thread.start()
 
     @staticmethod
     def makeIcon():
-        return Icon.composed(Icon.image(Path(__file__).parent / "readeck.svg"), Icon.grapheme("🔗"))
+        return Icon.composed(
+            Icon.image(Path(__file__).parent / "readeck.svg"), Icon.grapheme("🔗")
+        )
+
+    def makeSyncIcon():
+        return Icon.theme("view-refresh")
 
     def __del__(self):
         self._thread.stop()
@@ -101,7 +110,9 @@ class Plugin(PluginInstance, IndexQueryHandler):
         if self._thread.is_alive():
             self._thread.stop()
             self._thread.join()
-        self._thread = LinkFetcherThread(callback=self.fetchIndexItems, cache_length=self._cache_length)
+        self._thread = LinkFetcherThread(
+            callback=self.fetchIndexItems, cache_length=self._cache_length
+        )
         self._thread.start()
 
     def configWidget(self):
@@ -113,7 +124,11 @@ class Plugin(PluginInstance, IndexQueryHandler):
                 "label": "API key",
                 "widget_properties": {"echoMode": "Password"},
             },
-            {"type": "spinbox", "property": "cache_length", "label": "Cache length (minutes)"},
+            {
+                "type": "spinbox",
+                "property": "cache_length",
+                "label": "Cache length (minutes)",
+            },
         ]
 
     def updateIndexItems(self):
@@ -128,7 +143,9 @@ class Plugin(PluginInstance, IndexQueryHandler):
             self._index_items.append(IndexItem(item=item, string=filter))
         self.updateIndexItems()
         info(
-            "Indexed {} bookmarks [{:d} ms]".format(len(self._index_items), (int(perf_counter_ns() - start) // 1000000))
+            "Indexed {} bookmarks [{:d} ms]".format(
+                len(self._index_items), (int(perf_counter_ns() - start) // 1000000)
+            )
         )
         self._index_items = []
 
@@ -149,12 +166,46 @@ class Plugin(PluginInstance, IndexQueryHandler):
                 text="Refresh cache index",
                 subtext="Refresh indexed bookmarks",
                 icon_factory=Plugin.makeIcon,
-                actions=[Action("refresh", "Refresh readeck index", lambda: self.fetchIndexItems())],
+                actions=[
+                    Action(
+                        "refresh",
+                        "Refresh readeck index",
+                        lambda: self.fetchIndexItems(),
+                    )
+                ],
             )
         )
 
+    def items(self, ctx):
+        if ctx.query.strip():
+            items = self.rankItems(ctx)
+        else:
+            items = [
+                StandardItem(
+                    text=md_name,
+                    subtext="Search for a page saved in Readeck",
+                    icon_factory=Plugin.makeIcon,
+                )
+            ]
+        items.append(
+            StandardItem(
+                text="Refresh cache index",
+                subtext="Refresh indexed bookmarks",
+                icon_factory=Plugin.makeSyncIcon,
+                actions=[
+                    Action(
+                        "refresh",
+                        "Refresh Readeck index",
+                        lambda: self.fetchIndexItems(),
+                    )
+                ],
+            )
+        )
+        yield items
     def _create_filters(self, item: dict):
-        return ",".join([item["url"], item["title"], ",".join(label for label in item["labels"])])
+        return ",".join(
+            [item["url"], item["title"], ",".join(label for label in item["labels"])]
+        )
 
     def _gen_item(self, bookmark: dict):
         title = bookmark["title"] or bookmark["url"]
@@ -164,14 +215,34 @@ class Plugin(PluginInstance, IndexQueryHandler):
         return StandardItem(
             id=str(self.id),
             text=title,
-            subtext="{}: {}".format(",".join(label for label in bookmark["labels"]), bookmark["url"]),
+            subtext="{}: {}".format(
+                ",".join(label for label in bookmark["labels"]), bookmark["url"]
+            ),
             icon_factory=Plugin.makeIcon,
             actions=[
-                Action("open", "Open in Readeck", lambda u=bookmark["href"].replace("/api", "", 1): openUrl(u)),
-                Action("open", "Open bookmark URL", lambda u=bookmark["url"]: openUrl(u)),
-                Action("copy", "Copy URL to clipboard", lambda u=bookmark["url"]: setClipboardText(u)),
-                Action("archive", "Archive bookmark", lambda u=bookmark["id"]: self._archive_bookmark(u)),
-                Action("delete", "Delete bookmark", lambda u=bookmark["id"]: self._archive_bookmark(u)),
+                Action(
+                    "open",
+                    "Open in Readeck",
+                    lambda u=bookmark["href"].replace("/api", "", 1): openUrl(u),
+                ),
+                Action(
+                    "open", "Open bookmark URL", lambda u=bookmark["url"]: openUrl(u)
+                ),
+                Action(
+                    "copy",
+                    "Copy URL to clipboard",
+                    lambda u=bookmark["url"]: setClipboardText(u),
+                ),
+                Action(
+                    "archive",
+                    "Archive bookmark",
+                    lambda u=bookmark["id"]: self._archive_bookmark(u),
+                ),
+                Action(
+                    "delete",
+                    "Delete bookmark",
+                    lambda u=bookmark["id"]: self._archive_bookmark(u),
+                ),
             ],
         )
 
@@ -225,7 +296,10 @@ class Plugin(PluginInstance, IndexQueryHandler):
 
     def _delete_bookmark(self, bookmark_id: str):
         url = f"{self._instance_url}/api/bookmarks/{bookmark_id}"
-        headers = {"User-Agent": self.user_agent, "Authorization": f"Bearer {self._api_key}"}
+        headers = {
+            "User-Agent": self.user_agent,
+            "Authorization": f"Bearer {self._api_key}",
+        }
         debug("About to DELETE {}".format(url))
         response = requests.delete(url, headers=headers)
         if response.ok:
@@ -235,7 +309,10 @@ class Plugin(PluginInstance, IndexQueryHandler):
 
     def _archive_bookmark(self, bookmark_id: str):
         url = f"{self._instance_url}/api/bookmarks/{bookmark_id}/"
-        headers = {"User-Agent": self.user_agent, "Authorization": f"Bearer {self._api_key}"}
+        headers = {
+            "User-Agent": self.user_agent,
+            "Authorization": f"Bearer {self._api_key}",
+        }
         debug("About to PATCH {}".format(url))
         response = requests.patch(url, json={"is_archived": True}, headers=headers)
         if response.ok:
